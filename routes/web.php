@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\RafflePrizeController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -13,6 +14,13 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::get('/', [RafflePrizeController::class,'index']);
+Route::get('/raffle/congratulation', [RafflePrizeController::class,'raffle']);
+Route::get('/raffle/convert', [RafflePrizeController::class,'convert']);
+Route::get('/raffle/refuse', [RafflePrizeController::class,'refuse']);
+
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware(['auth'])->name('dashboard');
+
+require __DIR__.'/auth.php';
