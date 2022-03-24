@@ -6,6 +6,7 @@ use App\Services\RaffleServiceInterface;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
 
 class RafflePrizeController extends Controller
 {
@@ -34,18 +35,34 @@ class RafflePrizeController extends Controller
      */
     public function raffle(): Factory|View|Application
     {
-        $prize = $this->raffleService->createPrize();
+        $userId = Auth::id();
+
+        $prize = $this->raffleService->createPrize($userId);
 
         return view('raffle.congratulation', ['prize' => $prize]);
     }
 
-    public function convert()
+    /**
+     * @param int $id
+     * @return Factory|View|Application
+     */
+    public function convert(int $id): Factory|View|Application
     {
-        echo 'h1';
+        $userId = Auth::id();
+
+        $this->raffleService->convertPrize($id, $userId);
+
+        return view('raffle.index');
     }
 
-    public function refuse()
+    /**
+     * @param int $id
+     * @return Factory|View|Application
+     */
+    public function refuse(int $id): Factory|View|Application
     {
+        $this->raffleService->refusePrize($id);
 
+        return view('raffle.index');
     }
 }

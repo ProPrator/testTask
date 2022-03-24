@@ -11,17 +11,18 @@ use App\Models\ItemList;
 use App\Models\Money;
 use App\Models\MoneyInterval;
 use App\Models\Prize;
-use Illuminate\Support\Facades\Auth;
+use App\Models\Reserve;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class RaffleService implements RaffleServiceInterface
 {
-
-    public function createPrize(): Prize
+    /**
+     * @param int $userId
+     * @return Prize
+     */
+    public function createPrize(int $userId): Prize
     {
-        $userId = Auth::id();
-        $userId = 1;
-
         DB::beginTransaction();
 
             $prize = new Prize();
@@ -51,6 +52,8 @@ class RaffleService implements RaffleServiceInterface
                     $item->name = $this->getItemTypeOfNewPrize();
                     $item->save();
 
+                    $this->updateItemQuantity(-1);
+
                     $prize->item_id = $item->id;
                     $prize->type = EntityType::ITEM;
                     break;
@@ -70,9 +73,34 @@ class RaffleService implements RaffleServiceInterface
         return ItemList::VALUE[array_rand(ItemList::VALUE)];
     }
 
+    /**
+     * @param int $count
+     * @return void
+     */
+    private function updateItemQuantity(int $count): void
+    {
+        $itemReserve = Reserve::where('name', EntityType::ITEM)->first();
+        $itemReserve->count += $count;
+        $itemReserve->save();
+    }
+
+    /**
+     * @param int $min
+     * @param int $max
+     * @return int
+     */
     private function getRandNumberInInterval(int $min, int $max): int
     {
-        return rand($min, $max);
+        $moneyReserve = Reserve::where('name', EntityType::MONEY)->first();
+        $moneyCount = $moneyReserve->count;
+        if ($max < $moneyCount) {
+            $max = $moneyCount;
+        }
+        $rand = rand($min, $max);
+        $moneyReserve->count -= $rand;
+        $moneyReserve->save();
+
+        return $rand;
     }
 
     /**
@@ -80,11 +108,79 @@ class RaffleService implements RaffleServiceInterface
      */
     private function getTypeOfNewPrize(): string
     {
+
         $typeList = [
-            EntityType::ITEM,
             EntityType::MONEY,
             EntityType::BONUS
         ];
+        if (Reserve::isExistsItem()) {
+            $typeList[] = EntityType::ITEM;
+        }
+        if (Reserve::isExistsMoney()) {
+            $typeList[] = EntityType::MONEY;
+        }
+
+
         return $typeList[array_rand($typeList)];
+    }
+
+    /**
+     * @param int $prizeId
+     * @param int $userId
+     * @return void
+     */
+    public function convertPrize(int $prizeId, int $userId): void
+    {
+        DB::beginTransaction();
+
+            $prize = Prize::where('id', $prizeId)->first();
+            $prize->status = EntityStatus::DISABLE;
+            $prize->save();
+
+            $user = User::where('id', $userId)->first();
+            $user->bonuses = $prize->monye->cents;
+            $user->save();
+
+        DB::commit();
+    }
+
+    /**
+     * @param int $prizeId
+     * @return void
+     */
+    public function refusePrize(int $prizeId): void
+    {
+        $prize = Prize::where('id', $prizeId)->first();
+        $prize->status = EntityStatus::DISABLE;
+        $prize->save();
+
+        $this->backToReserve($prize);
+    }
+
+    /**
+     * @param Prize $prize
+     * @return void
+     */
+    private function backToReserve(Prize $prize): void
+    {
+        $detail = $prize->getPrizeDetails();
+
+        if($detail instanceof Item) {
+            $this->updateItemQuantity(1);
+        }
+        if ($detail instanceof Money) {
+            $this->updateMoneyQuantity($detail->cents);
+        }
+    }
+
+    /**
+     * @param int $count
+     * @return void
+     */
+    private function updateMoneyQuantity(int $count): void
+    {
+        $itemReserve = Reserve::where('name', EntityType::MONEY)->first();
+        $itemReserve->count += $count;
+        $itemReserve->save();
     }
 }

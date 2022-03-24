@@ -5,6 +5,6 @@ namespace App\Models;
 class ItemList
 {
     const VALUE = [
-      '1', '2', '3'
+      'souvenir', 'cup', 'cap'
     ];
 }

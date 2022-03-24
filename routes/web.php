@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\BonusController;
+use App\Http\Controllers\CmsController;
+use App\Http\Controllers\MoneyController;
 use App\Http\Controllers\RafflePrizeController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,8 +19,16 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [RafflePrizeController::class,'index']);
 Route::get('/raffle/congratulation', [RafflePrizeController::class,'raffle']);
-Route::get('/raffle/convert', [RafflePrizeController::class,'convert']);
-Route::get('/raffle/refuse', [RafflePrizeController::class,'refuse']);
+Route::POST('/raffle/convert/{id}', [RafflePrizeController::class,'convert'])
+    ->where('id', '[0-9]+');
+Route::POST('/raffle/refuse/{id}', [RafflePrizeController::class,'refuse'])
+    ->where('id', '[0-9]+');
+
+Route::POST('/money/send', [MoneyController::class, 'send']);
+
+Route::POST('/bonus/send/{id}', [BonusController::class, 'send']);
+
+Route::POST('/cms/item/send/{id}', [CmsController::class, 'sendItem']);
 
 Route::get('/dashboard', function () {
     return view('dashboard');
